@@ -2,11 +2,8 @@ package msgQ.consumer;
 
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
-
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
+import java.util.concurrent.BlockingQueue;
 
 import msgQ.common.ZkUtils;
 
@@ -17,6 +14,7 @@ public class Consumer {
     private Set<String> subcriptions;
     private String zkPath;
     private CuratorFramework zkClient;
+    private HashMap<String, BlockingQueue<ConsumerRecord>> records;
     private enum State
     {
         LATENT,
@@ -47,10 +45,10 @@ public class Consumer {
 
         try {
             zkClient.create().creatingParentContainersIfNeeded().forPath(this.zkPath);
-            this.curState = State.STARTED;
         } catch (Exception e) {
 
         }
+        this.curState = State.STARTED;
     }
 
     /**
@@ -61,14 +59,17 @@ public class Consumer {
         if(this.curState != State.STARTED) {
             throw new Exception(); //TODO: illegal exception
         }
+        // TODO: Unsubscribe all topics
         this.zkClient.close();
+        this.curState = State.STOPPED;
     }
 
     /**
      * Subscribe to topics
      *
      */
-    public void subscribe() throws Exception {
+    public void subscribeTopic(String topic) throws Exception {
+        subcriptions.add(topic);
 
     }
 
@@ -76,7 +77,7 @@ public class Consumer {
      * Unsubscribe to topics
      *
      */
-    public void unsubscribe() throws Exception {
+    public void unsubscribeTopic(String topic) throws Exception {
 
     }
 
@@ -84,9 +85,7 @@ public class Consumer {
      * return list of all subscribed topics
      *
      */
-    public List<String> getSubscriptions() {
-        List<String> listOfSubscriptions = new ArrayList<>(subcriptions.size());
-        // TODO: imp
-        return listOfSubscriptions;
+    public String[] getSubscriptions() {
+        return subcriptions.toArray(new String[0]);
     }
 }
