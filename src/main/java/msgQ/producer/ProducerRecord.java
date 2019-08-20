@@ -10,6 +10,9 @@ public class ProducerRecord<T> implements Record<T> {
     private UUID uuid;
     private int groupId = -1;
 
+    public void setGroupId(int id) {
+        this.groupId = id;
+    }
     @Override
     public String getTopic() {
         return this.topic;

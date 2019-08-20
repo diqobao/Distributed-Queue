@@ -1,5 +1,7 @@
 package msgQ.producer;
 
+import msgQ.common.Constants;
+
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.*;
@@ -8,13 +10,12 @@ public class SendThread extends Thread {
     private BlockingQueue<ProducerRecord<?>> queue;
     private Map<ProducerRecord<?>, CompletableFuture<ProducerMetaRecord>> futureMap = new HashMap<>();
     private ExecutorService executor;
-    private static int NUM_THREADS = 10;
     private int timeOut;
 
     public SendThread() {
         this.queue = new LinkedBlockingQueue<>();
         this.futureMap = new HashMap<>();
-        this.executor = Executors.newFixedThreadPool(NUM_THREADS);
+        this.executor = Executors.newFixedThreadPool(Constants.NUM_THREADS);
     }
 
     public void send(ProducerRecord<?> prod, CompletableFuture<ProducerMetaRecord> future) {
