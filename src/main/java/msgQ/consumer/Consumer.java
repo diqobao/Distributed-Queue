@@ -1,5 +1,8 @@
 package msgQ.consumer;
 
+import com.linecorp.armeria.server.Server;
+import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.grpc.GrpcServiceBuilder;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 import java.util.*;
@@ -22,10 +25,7 @@ public class Consumer {
         STOPPED
     }
 
-    /**
-    * Set up a new consumer
-    *
-    */
+
     public Consumer(String path) {
         this.curState = State.LATENT;
         this.subcriptions = new HashSet<>();
@@ -59,26 +59,34 @@ public class Consumer {
         if(this.curState != State.STARTED) {
             throw new Exception(); //TODO: illegal exception
         }
-        // TODO: Unsubscribe all topics
+        unsubscribeTopics(getSubscriptions());
         this.zkClient.close();
         this.curState = State.STOPPED;
     }
 
-    /**
-     * Subscribe to topics
-     *
-     */
-    public void subscribeTopic(String topic) throws Exception {
+    public void _subscribeTopic(String topic) throws Exception {
         subcriptions.add(topic);
+        ServerBuilder sb = new ServerBuilder();
+//        sb.service(new GrpcServiceBuilder().addService(new MyHelloService())
+//                .build());
+//        Server server = sb.build();
+//        server.start();
+    }
+
+    public void _unsubscribeTopic(String topic) throws Exception {
 
     }
 
-    /**
-     * Unsubscribe to topics
-     *
-     */
-    public void unsubscribeTopic(String topic) throws Exception {
+    public void subscribeTopics(String[] topics) throws Exception {
+        for(String topic: topics) {
+            _subscribeTopic(topic);
+        }
+    }
 
+    public void unsubscribeTopics(String[] topics) throws Exception {
+        for(String topic: topics) {
+            _unsubscribeTopic(topic);
+        }
     }
 
     /**

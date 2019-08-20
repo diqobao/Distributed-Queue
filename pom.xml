@@ -9,9 +9,10 @@
     <version>1.0-SNAPSHOT</version>
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <grpc.version>1.23.0</grpc.version>
+        <grpc.version>1.22.2</grpc.version>
         <protobuf.version>3.9.0</protobuf.version>
         <protoc.version>3.9.0</protoc.version>
+        <armeria.version>0.90.2</armeria.version>
         <!-- required for jdk9 -->
         <maven.compiler.source>1.8</maven.compiler.source>
         <maven.compiler.target>1.8</maven.compiler.target>
@@ -64,82 +65,77 @@
         <dependency>
             <groupId>com.google.protobuf</groupId>
             <artifactId>protobuf-java</artifactId>
-            <version>3.4.0</version>
+            <version>${protobuf.version}</version>
         </dependency>
         <dependency>
             <groupId>io.grpc</groupId>
             <artifactId>grpc-netty-shaded</artifactId>
-            <version>1.23.0</version>
+            <version>${grpc.version}</version>
         </dependency>
         <dependency>
             <groupId>io.grpc</groupId>
             <artifactId>grpc-protobuf</artifactId>
-            <version>1.23.0</version>
+            <version>${grpc.version}</version>
         </dependency>
         <dependency>
             <groupId>io.grpc</groupId>
             <artifactId>grpc-stub</artifactId>
-            <version>1.23.0</version>
+            <version>${grpc.version}</version>
         </dependency>
         <dependency>
             <groupId>com.linecorp.armeria</groupId>
             <artifactId>armeria</artifactId>
-            <version>0.90.2</version>
+            <version>${armeria.version}</version>
         </dependency>
         <dependency>
             <groupId>com.linecorp.armeria</groupId>
             <artifactId>armeria-grpc</artifactId>
-            <version>0.90.2</version>
+            <version>${armeria.version}</version>
         </dependency>
         <dependency>
             <groupId>com.linecorp.armeria</groupId>
             <artifactId>armeria-jetty</artifactId>
-            <version>0.90.2</version>
+            <version>${armeria.version}</version>
         </dependency>
         <dependency>
             <groupId>com.linecorp.armeria</groupId>
             <artifactId>armeria-kafka</artifactId>
-            <version>0.90.2</version>
+            <version>${armeria.version}</version>
         </dependency>
         <dependency>
             <groupId>com.linecorp.armeria</groupId>
             <artifactId>armeria-logback</artifactId>
-            <version>0.90.2</version>
+            <version>${armeria.version}</version>
         </dependency>
         <dependency>
             <groupId>com.linecorp.armeria</groupId>
             <artifactId>armeria-retrofit2</artifactId>
-            <version>0.90.2</version>
+            <version>${armeria.version}</version>
         </dependency>
         <dependency>
             <groupId>com.linecorp.armeria</groupId>
             <artifactId>armeria-rxjava</artifactId>
-            <version>0.90.2</version>
+            <version>${armeria.version}</version>
         </dependency>
         <dependency>
             <groupId>com.linecorp.armeria</groupId>
             <artifactId>armeria-saml</artifactId>
-            <version>0.90.2</version>
-        </dependency>
-        <dependency>
-            <groupId>com.linecorp.armeria</groupId>
-            <artifactId>armeria-thrift</artifactId>
-            <version>0.90.2</version>
+            <version>${armeria.version}</version>
         </dependency>
         <dependency>
             <groupId>com.linecorp.armeria</groupId>
             <artifactId>armeria-tomcat</artifactId>
-            <version>0.90.2</version>
+            <version>${armeria.version}</version>
         </dependency>
         <dependency>
             <groupId>com.linecorp.armeria</groupId>
             <artifactId>armeria-zipkin</artifactId>
-            <version>0.90.2</version>
+            <version>${armeria.version}</version>
         </dependency>
         <dependency>
             <groupId>com.linecorp.armeria</groupId>
             <artifactId>armeria-zookeeper</artifactId>
-            <version>0.90.2</version>
+            <version>${armeria.version}</version>
         </dependency>
 
         <!-- Logging -->
