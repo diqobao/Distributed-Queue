@@ -9,10 +9,11 @@ import java.util.*;
 import java.util.concurrent.BlockingQueue;
 
 import msgQ.common.ZkUtils;
+import org.apache.zookeeper.CreateMode;
 
 public class Consumer {
 
-    int uuid;
+    UUID uuid;
     private State curState;
     private Set<String> subcriptions;
     private String zkPath;
@@ -26,12 +27,11 @@ public class Consumer {
     }
 
 
-    public Consumer(String path) {
+    public Consumer(Properties configs) {
         this.curState = State.LATENT;
         this.subcriptions = new HashSet<>();
-        this.zkPath = path;
+        this.zkPath = configs.getProperty("path", "");
         this.zkClient = ZkUtils.buildZkClient(this.zkPath, 1000,1000);
-
     }
 
     /**
@@ -44,10 +44,15 @@ public class Consumer {
         }
 
         try {
-            zkClient.create().creatingParentContainersIfNeeded().forPath(this.zkPath);
+            zkClient.create().creatingParentContainersIfNeeded().withMode(CreateMode.EPHEMERAL).forPath(this.zkPath);
         } catch (Exception e) {
 
         }
+        ServerBuilder sb = new ServerBuilder();
+        sb.service(new GrpcServiceBuilder().addService(new MessagePushThread())
+                .build());
+        Server server = sb.build();
+        server.start();
         this.curState = State.STARTED;
     }
 
@@ -64,17 +69,16 @@ public class Consumer {
         this.curState = State.STOPPED;
     }
 
-    public void _subscribeTopic(String topic) throws Exception {
+    private void _subscribeTopic(String topic) throws Exception {
         subcriptions.add(topic);
-        ServerBuilder sb = new ServerBuilder();
-//        sb.service(new GrpcServiceBuilder().addService(new MyHelloService())
-//                .build());
-//        Server server = sb.build();
-//        server.start();
+        String path = "subscribe/"+ topic + "consumer";
+        zkClient.create().creatingParentContainersIfNeeded().forPath(path);
     }
 
-    public void _unsubscribeTopic(String topic) throws Exception {
-
+    private void _unsubscribeTopic(String topic) throws Exception {
+        subcriptions.remove(topic);
+        String path =  "subscribe/" + "/"+ topic;
+        zkClient.delete().deletingChildrenIfNeeded().forPath(path);
     }
 
     public void subscribeTopics(String[] topics) throws Exception {
