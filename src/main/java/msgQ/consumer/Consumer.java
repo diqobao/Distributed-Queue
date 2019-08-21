@@ -46,7 +46,7 @@ public class Consumer {
         try {
             zkClient.create().creatingParentContainersIfNeeded().withMode(CreateMode.EPHEMERAL).forPath(this.zkPath);
         } catch (Exception e) {
-
+            e.printStackTrace();
         }
         ServerBuilder sb = new ServerBuilder();
         sb.service(new GrpcServiceBuilder().addService(new MessagePushThread())
