@@ -18,14 +18,14 @@ public class SendHandler extends Thread {
     @Override
     public void run() {
         int groupId = record.getGroupId();
-        ByteArrayOutputStream bao = new ByteArrayOutputStream();
-        ObjectOutputStream output = new ObjectOutputStream(bao);
-        try {
-            output.writeObject(record);
-            ByteBuffer bytes = ByteBuffer.wrap(bao.toByteArray());
-            PrimaryClients[groupId].sned(bytes);
-        } catch (IOException ioe) {
-            ioe.printStackTrace();
-        }
+//        ByteArrayOutputStream bao = new ByteArrayOutputStream();
+//        ObjectOutputStream output = new ObjectOutputStream(bao);
+//        try {
+//            output.writeObject(record);
+//            ByteBuffer bytes = ByteBuffer.wrap(bao.toByteArray());
+//            PrimaryClients[groupId].sned(bytes);
+//        } catch (IOException ioe) {
+//            ioe.printStackTrace();
+//        }
     }
 }

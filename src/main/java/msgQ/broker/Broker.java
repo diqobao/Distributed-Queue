@@ -1,21 +1,26 @@
 package msgQ.broker;
 
-import msgQ.common.ZkUtils;
 import org.apache.curator.framework.CuratorFramework;
+import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.framework.recipes.leader.LeaderLatch;
 
-public class Broker {
-    int groupId;
-    CuratorFramework zkClient;
-    public Broker() {
+import msgQ.common.ZkUtils;
 
+
+public class Broker {
+    private int groupId;
+    private CuratorFramework zkClient;
+
+    public Broker() {
+        groupId = 0;
+        zkClient = ZkUtils.newZkClient("", 5000, 50000);
     }
 
     private void register() {
-
+        zkClient.start();
     }
 
-    private void SpawnDeliverThread() {
+    private void spawnDeliverThread() {
 
     }
 

@@ -10,6 +10,11 @@ public class ConsumerRecord<T> implements Record<T> {
     private UUID uuid;
     private int groupId = -1;
 
+    ConsumerRecord(MessagePushProto.ConsumerRecordReq consumerRecordReq) {
+        this.topic = consumerRecordReq.getTopic();
+        this.value = (T) consumerRecordReq.getMessage();
+        this.uuid = UUID.fromString(consumerRecordReq.getUuid());
+    }
     public void setGroupId(int id) {
         this.groupId = id;
     }

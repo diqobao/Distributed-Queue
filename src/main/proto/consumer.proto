@@ -3,18 +3,19 @@ syntax = "proto3";
 package consumer;
 
 option java_package = "msgQ.consumer";
-option java_outer_classname = "ConsumerMessagePush";
+option java_outer_classname = "MessagePushProto";
 
 service MessagePush {
-    rpc PushMsg (RecordReq) returns (RecordReply) {}
+    rpc PushMsg (ConsumerRecordReq) returns (RecordReply) {}
 }
 
-message RecordReq {
+message ConsumerRecordReq {
     string uuid = 1;
     string topic = 2;
     string message = 3;
 }
 
 message RecordReply {
-    string message = 1;
+    string uuid = 1;
+    string message = 2;
 }
