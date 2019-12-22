@@ -32,6 +32,7 @@ public class Consumer {
     private String zkPath;
     private CuratorFramework zkClient;
     private BlockingQueue<ConsumerRecord> records;
+    private Thread recvThread;
 
     public Consumer(Properties configs) {
         this.curState = State.LATENT;
@@ -40,14 +41,15 @@ public class Consumer {
         this.zkPath = configs.getProperty("path", "");
 //        this.zkClient = ZkUtils.newZkClient(zkPath, 1000, 1000);
         this.records = new LinkedBlockingDeque<>();
-        server = ServerBuilder.forPort(PORT).addService(new MessagePushService(records))
+        this.server = ServerBuilder.forPort(PORT).addService(new MessagePushService(records))
                 .build();
+        this.recvThread = new RecvThread(records);
     }
 
     /**
      * Start consumer
      */
-    public void start() throws Exception {
+    public synchronized void start() throws Exception {
         if(this.curState != State.LATENT) {
             throw new Exception(); //TODO: illegal exception
         }
@@ -57,6 +59,7 @@ public class Consumer {
 //            e.printStackTrace();
 //        }
         server.start();
+        recvThread.start();
         this.curState = State.STARTED;
         logger.info("Server started, listening on " + PORT);
     }
@@ -72,6 +75,7 @@ public class Consumer {
         unsubscribeTopics(getSubscriptions());
         this.zkClient.close();
         server.shutdown().awaitTermination(30, TimeUnit.SECONDS);
+        recvThread.join();
     }
 
     private void _subscribeTopic(String topic) throws Exception {
@@ -111,12 +115,34 @@ public class Consumer {
      * TODO: print newest records
      */
     private void printRecord() {
-        records.poll();
+        records.poll().toString();
     }
 
     private void blockUntilShutdown() throws InterruptedException {
         if (server != null) {
             server.awaitTermination();
+        }
+    }
+
+    private static class RecvThread extends Thread {
+        private final BlockingQueue<ConsumerRecord> records;
+
+        RecvThread(BlockingQueue<ConsumerRecord> _records) {
+            this.records = _records;
+        }
+
+        @Override
+        public void run() {
+            try {
+                while(true) {
+                    if(!records.isEmpty()) {
+                        System.out.println(records.poll().toString());
+                    }
+                    Thread.sleep(1000);
+                }
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
         }
     }
 
@@ -135,7 +161,6 @@ public class Consumer {
 
         private RecordReply addNewRecord(ConsumerRecordReq recordReq) {
             records.offer(new ConsumerRecord(recordReq));
-            System.out.println(recordReq.getMessage());
             return RecordReply.newBuilder().setUuid(recordReq.getUuid()).setMessage("ok").build();
         }
     }

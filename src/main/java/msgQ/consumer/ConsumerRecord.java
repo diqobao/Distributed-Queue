@@ -43,4 +43,8 @@ public class ConsumerRecord<T> implements Record<T> {
     public int getGroupId() {
         return this.groupId;
     }
+
+    public String toString() {
+        return String.format("uuid: %s topic: %s msg: %s", uuid.toString(), topic, value);
+    }
 }
