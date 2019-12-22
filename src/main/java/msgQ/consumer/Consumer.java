@@ -3,28 +3,23 @@ package msgQ.consumer;
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
 import io.grpc.stub.StreamObserver;
-import org.apache.zookeeper.CreateMode;
 import org.apache.curator.framework.CuratorFramework;
 
-import java.io.IOException;
 import java.util.HashSet;
 import java.util.Properties;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.TimeUnit;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import msgQ.consumer.ConsumerUtils.State;
-import msgQ.common.ZkUtils;
 import msgQ.consumer.MessagePushProto.*;
 
 public class Consumer {
     private final int PORT;
-    private static final Logger logger = Logger.getLogger(Consumer.class.getName());
+    private static final Logger LOGGER = Logger.getLogger(Consumer.class.getName());
     private final Server server;
     UUID uuid;
     private State curState;
@@ -61,7 +56,7 @@ public class Consumer {
         server.start();
         recvThread.start();
         this.curState = State.STARTED;
-        logger.info("Server started, listening on " + PORT);
+        LOGGER.info("Server started, listening on " + PORT);
     }
 
     /**

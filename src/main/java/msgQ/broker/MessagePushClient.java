@@ -21,8 +21,14 @@ public class MessagePushClient {
     private final MessagePushGrpc.MessagePushStub asyncStub;
     private final MessagePushGrpc.MessagePushBlockingStub blockingStub;
 
-    public MessagePushClient(String host, int port) {
+    MessagePushClient(String host, int port) {
         ManagedChannelBuilder channelBuilder = ManagedChannelBuilder.forAddress(host, port).usePlaintext();
+        channel = channelBuilder.build();
+        blockingStub = MessagePushGrpc.newBlockingStub(channel);
+        asyncStub = MessagePushGrpc.newStub(channel);
+    }
+
+    MessagePushClient(ManagedChannelBuilder channelBuilder) {
         channel = channelBuilder.build();
         blockingStub = MessagePushGrpc.newBlockingStub(channel);
         asyncStub = MessagePushGrpc.newStub(channel);
