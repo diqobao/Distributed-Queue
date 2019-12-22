@@ -15,9 +15,17 @@ public class ConsumerRecord<T> implements Record<T> {
         this.value = (T) consumerRecordReq.getMessage();
         this.uuid = UUID.fromString(consumerRecordReq.getUuid());
     }
+
+    public ConsumerRecord(UUID uuid, String topic, T value) {
+        this.topic = topic;
+        this.value = value;
+        this.uuid = uuid;
+    }
+
     public void setGroupId(int id) {
         this.groupId = id;
     }
+
     @Override
     public String getTopic() {
         return this.topic;

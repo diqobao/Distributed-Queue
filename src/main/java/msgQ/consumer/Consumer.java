@@ -36,9 +36,9 @@ public class Consumer {
     public Consumer(Properties configs) {
         this.curState = State.LATENT;
         this.subcriptions = new HashSet<>();
-        this.PORT = 43; // TODO: port number
+        this.PORT = 5001;
         this.zkPath = configs.getProperty("path", "");
-        this.zkClient = ZkUtils.newZkClient(zkPath, 1000,1000);
+//        this.zkClient = ZkUtils.newZkClient(zkPath, 1000, 1000);
         this.records = new LinkedBlockingDeque<>();
         server = ServerBuilder.forPort(PORT).addService(new MessagePushService(records))
                 .build();
@@ -51,11 +51,11 @@ public class Consumer {
         if(this.curState != State.LATENT) {
             throw new Exception(); //TODO: illegal exception
         }
-        try {
-            zkClient.create().creatingParentContainersIfNeeded().withMode(CreateMode.EPHEMERAL).forPath(this.zkPath);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+//        try {
+//            zkClient.create().creatingParentContainersIfNeeded().withMode(CreateMode.EPHEMERAL).forPath(this.zkPath);
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//        }
         server.start();
         this.curState = State.STARTED;
         logger.info("Server started, listening on " + PORT);
@@ -114,6 +114,12 @@ public class Consumer {
         records.poll();
     }
 
+    private void blockUntilShutdown() throws InterruptedException {
+        if (server != null) {
+            server.awaitTermination();
+        }
+    }
+
     private static class MessagePushService extends MessagePushGrpc.MessagePushImplBase {
         private final BlockingQueue<ConsumerRecord> records;
 
@@ -123,13 +129,24 @@ public class Consumer {
 
         @Override
         public void pushMsg(ConsumerRecordReq consumerRecordReq, StreamObserver<RecordReply> responseObserver) {
-            responseObserver.onNext(checkFeature(consumerRecordReq));
+            responseObserver.onNext(addNewRecord(consumerRecordReq));
             responseObserver.onCompleted();
         }
 
-        private RecordReply checkFeature(ConsumerRecordReq recordReq) {
+        private RecordReply addNewRecord(ConsumerRecordReq recordReq) {
             records.offer(new ConsumerRecord(recordReq));
+            System.out.println(recordReq.getMessage());
             return RecordReply.newBuilder().setUuid(recordReq.getUuid()).setMessage("ok").build();
         }
+    }
+
+    public static void main(String[] args) throws Exception {
+        Properties configs = new Properties();
+        configs.put("host", "localhost");
+        configs.put("port", 5001);
+        configs.put("zkAddr", "ZkAddr");
+        Consumer consumer = new Consumer(configs);
+        consumer.start();
+        consumer.blockUntilShutdown();
     }
 }
