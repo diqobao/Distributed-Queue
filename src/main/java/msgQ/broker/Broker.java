@@ -33,7 +33,7 @@ public class Broker {
         BROKERID = brokerConfigs.getProperty("id");
         groupId = _groupId;
         PORT = _port;
-        PATH = String.format("/%s/%d", "replica", groupId);
+        PATH = String.format("/%s/%d", "brokers", groupId);
         zkAddress = brokerConfigs.getProperty("zkAddress");
         timestamp = 0;
         isLeader = false;
@@ -54,22 +54,28 @@ public class Broker {
                 @Override
                 public void isLeader() {
                     isLeader = true;
+                    LOGGER.info("LEADER ELECTION: is now primary node");
+//                    if (zkClient.checkExists().forPath(PATH) == null)
+//                        zkClient.create().creatingParentsIfNeeded().forPath(PATH);
                     spawnDeliverThread();
                     // TODO: update information in zookeeper
                 }
 
                 @Override
                 public void notLeader() {
+                    isLeader = false;
                     LOGGER.info("no longer leader");
                 }
             });
             leaderLatch.start();
         } catch (Exception e) {
+            LOGGER.info("Connection failed");
             e.printStackTrace();
         }
     }
 
     /**
+     * TODO: implement delivery thread
      * */
     private void spawnDeliverThread() {
 
