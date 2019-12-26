@@ -18,4 +18,5 @@ message ConsumerRecordReq {
 message RecordReply {
     string uuid = 1;
     string message = 2;
+    int32 code = 3;
 }

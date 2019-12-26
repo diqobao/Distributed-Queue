@@ -1,5 +1,6 @@
 package msgQ.broker;
 
+import io.grpc.stub.StreamObserver;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.framework.recipes.leader.LeaderLatch;
@@ -12,6 +13,7 @@ import java.util.logging.Logger;
 
 import msgQ.broker.BrokerUtils.*;
 import msgQ.common.ZkUtils;
+import msgQ.broker.MessageDeliveryProto.*;
 
 
 public class Broker {
@@ -25,7 +27,7 @@ public class Broker {
     private boolean isLeader;
     private CuratorFramework zkClient;
     private LeaderLatch leaderLatch;
-    private ConcurrentHashMap<String, BlockingQueue<?>> recordsMap;
+    private ConcurrentHashMap<String, ConcurrentHashMap<String, BlockingQueue<?>>> recordsMap;
     private MessagePushClient messagePushClient;
     private long timestamp;
 
@@ -76,9 +78,9 @@ public class Broker {
 
     /**
      * TODO: implement delivery thread
-     * */
+     */
     private void spawnDeliverThread() {
-
+        new DeliverThread(this).start();
     }
 
     public void start() {
@@ -86,10 +88,48 @@ public class Broker {
     }
 
     private void stop() {
-        if(state != State.STARTED) {
-            return ; // TODO: throw exception
+        if (state != State.STARTED) {
+            return; // TODO: throw exception
         }
         CloseableUtils.closeQuietly(leaderLatch);
         CloseableUtils.closeQuietly(zkClient);
+    }
+
+    /**
+     * Handler for each single incoming record from producer
+     * TODO: implement handler
+     */
+    private void incomingRecordHandler(BrokerRecord record) {
+        String topic = record.getTopic();
+    }
+
+    private static class MessageDeliveryService extends MessageDeliveryGrpc.MessageDeliveryImplBase {
+        Broker broker;
+
+        MessageDeliveryService(Broker _broker) {
+            broker = _broker;
+        }
+
+        @Override
+        public StreamObserver<MessageDeliveryProto.RecordReq> publishMsg(final StreamObserver<MessageDeliveryProto.RecordReply> responseObserver) {
+            return new StreamObserver<MessageDeliveryProto.RecordReq>() {
+                @Override
+                public void onNext(MessageDeliveryProto.RecordReq recordReq) {
+                    BrokerRecord record = new BrokerRecord(); // TODO: implement create the record
+                    broker.incomingRecordHandler(record);
+                }
+
+                @Override
+                public void onError(Throwable t) {
+                }
+
+                @Override
+                public void onCompleted() {
+                    responseObserver.onNext(MessageDeliveryProto.RecordReply.newBuilder()
+                            .setUuid("").setMessage("ok").setCode(200).build());
+                    responseObserver.onCompleted();
+                }
+            };
+        }
     }
 }

@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+package broker;
+
+option java_package = "msgQ.broker";
+option java_outer_classname = "MessageDeliveryProto";
+
+service MessageDelivery {
+    rpc PublishMsg (stream RecordReq) returns (RecordReply) {}
+}
+
+message RecordReq {
+    string uuid = 1;
+    string topic = 2;
+    string message = 3;
+    int32 groupId = 4;
+}
+
+message RecordReply {
+    string uuid = 1;
+    string message = 2;
+    int32 code = 3;
+}

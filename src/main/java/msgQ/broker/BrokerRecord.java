@@ -1,11 +1,10 @@
-package msgQ.producer;
+package msgQ.broker;
 
-import msgQ.broker.MessageDeliveryProto;
 import msgQ.common.Record;
 
 import java.util.UUID;
 
-public class ProducerRecord<T> implements Record<T> {
+public class BrokerRecord<T> implements Record<T> {
     private String topic;
     private T value;
     private UUID uuid;
@@ -32,8 +31,5 @@ public class ProducerRecord<T> implements Record<T> {
         return this.groupId;
     }
 
-    public MessageDeliveryProto.RecordReq toRecordReq() {
-        return MessageDeliveryProto.RecordReq.newBuilder()
-                .setUuid(uuid.toString()).setTopic(topic).setMessage((String) value).setGroupId(groupId).build();
-    }
+
 }

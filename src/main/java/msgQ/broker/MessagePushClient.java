@@ -42,7 +42,7 @@ public class MessagePushClient {
         RecordReply reply;
         try {
             reply = blockingStub.pushMsg(consumerRecordReq);
-            if(!reply.getMessage().equals("ok")) {
+            if(reply.getCode() != 200) {
                 // TODO: try again?
             }
         } catch (StatusRuntimeException e) {
