@@ -4,7 +4,7 @@ import io.grpc.Server;
 import io.grpc.ServerBuilder;
 import io.grpc.stub.StreamObserver;
 import org.apache.curator.framework.CuratorFramework;
-
+import java.nio.file.Paths;
 import java.util.HashSet;
 import java.util.Properties;
 import java.util.Set;
@@ -16,6 +16,7 @@ import java.util.logging.Logger;
 
 import msgQ.consumer.ConsumerUtils.State;
 import msgQ.consumer.MessagePushProto.*;
+import static msgQ.common.Constants.SUBSCRIPTION_PATH;
 
 public class Consumer {
     private final int PORT;
@@ -24,6 +25,7 @@ public class Consumer {
     UUID uuid;
     private State curState;
     private Set<String> subcriptions;
+    private String address;
     private String zkPath;
     private CuratorFramework zkClient;
     private BlockingQueue<ConsumerRecord> records;
@@ -75,13 +77,13 @@ public class Consumer {
 
     private void _subscribeTopic(String topic) throws Exception {
         subcriptions.add(topic);
-        String path = "subscribe/"+ topic + "consumer";
+        String path = Paths.get(SUBSCRIPTION_PATH, topic, "" + PORT).toString();
         zkClient.create().creatingParentContainersIfNeeded().forPath(path);
     }
 
     private void _unsubscribeTopic(String topic) throws Exception {
         subcriptions.remove(topic);
-        String path =  "subscribe/" + "/"+ topic;
+        String path = Paths.get(SUBSCRIPTION_PATH, topic, "" + PORT).toString();
         zkClient.delete().deletingChildrenIfNeeded().forPath(path);
     }
 
@@ -161,12 +163,14 @@ public class Consumer {
     }
 
     public static void main(String[] args) throws Exception {
-        Properties configs = new Properties();
-        configs.put("host", "localhost");
-        configs.put("port", 5001);
-        configs.put("zkAddr", "ZkAddr");
-        Consumer consumer = new Consumer(configs);
-        consumer.start();
-        consumer.blockUntilShutdown();
+//        Properties configs = new Properties();
+//        configs.put("host", "localhost");
+//        configs.put("port", 5001);
+//        configs.put("zkAddr", "ZkAddr");
+//        Consumer consumer = new Consumer(configs);
+//        consumer.start();
+//        consumer.blockUntilShutdown();
+        String path = Paths.get("localhost", "2332").toString();
+        System.out.println(path);
     }
 }

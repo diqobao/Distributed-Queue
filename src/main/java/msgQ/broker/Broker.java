@@ -6,14 +6,21 @@ import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.framework.recipes.leader.LeaderLatch;
 import org.apache.curator.framework.recipes.leader.LeaderLatchListener;
 import org.apache.curator.utils.CloseableUtils;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.logging.Logger;
 
 import msgQ.broker.BrokerUtils.*;
 import msgQ.common.ZkUtils;
 import msgQ.broker.MessageDeliveryProto.*;
+
+import static msgQ.common.Constants.LOCALHOST;
+import static msgQ.common.Constants.REPLICA_PATH;
 
 
 public class Broker {
@@ -27,8 +34,10 @@ public class Broker {
     private boolean isLeader;
     private CuratorFramework zkClient;
     private LeaderLatch leaderLatch;
-    private ConcurrentHashMap<String, ConcurrentHashMap<String, BlockingQueue<?>>> recordsMap;
-    private MessagePushClient messagePushClient;
+    // consumer -> records
+    private ConcurrentHashMap<String, BlockingQueue<BrokerRecord>> recordsMap;
+    private HashMap<String, MessagePushClient> messagePushClientsMap;
+//    private MessagePushClient messagePushClient;
     private long timestamp;
 
     public Broker(int _groupId, Properties brokerConfigs, int _port) {
@@ -40,7 +49,8 @@ public class Broker {
         timestamp = 0;
         isLeader = false;
         recordsMap = new ConcurrentHashMap<>();
-        messagePushClient = new MessagePushClient("localhost", PORT);
+        messagePushClientsMap = new HashMap<>();
+//        messagePushClient = new MessagePushClient("localhost", PORT);
         state = State.LATENT;
     }
 
@@ -66,7 +76,7 @@ public class Broker {
                 @Override
                 public void notLeader() {
                     isLeader = false;
-                    LOGGER.info("no longer leader");
+                    LOGGER.info("No longer leader");
                 }
             });
             leaderLatch.start();
@@ -95,12 +105,41 @@ public class Broker {
         CloseableUtils.closeQuietly(zkClient);
     }
 
+    public List<String> getSubscribersForTopic(String topic) {
+        String topicPath = REPLICA_PATH + topic;
+        List<String> subscribers = null;
+        try {
+            subscribers =  zkClient.getChildren().forPath(topicPath);
+            return subscribers;
+        } catch (Exception e) {
+            LOGGER.warning(e.getMessage());
+        }
+        return new ArrayList<>();
+    }
+
     /**
      * Handler for each single incoming record from producer
      * TODO: implement handler
      */
-    private void incomingRecordHandler(BrokerRecord record) {
+    private void incomingRecordHandler(BrokerRecord record) throws InterruptedException {
         String topic = record.getTopic();
+        String message = (String) record.getValue();
+        List<String> subscribers = getSubscribersForTopic(topic);
+        for(String consumer: subscribers) {
+            if(recordsMap.containsKey(consumer)) recordsMap.put(consumer, new LinkedBlockingQueue<>());
+            recordsMap.get(consumer).put(record);
+        }
+    }
+
+    public void sendNewRecords() throws InterruptedException {
+        for(String consumer: recordsMap.keySet()) {
+            if(!messagePushClientsMap.containsKey(consumer)) {
+                int port = Integer.parseInt(consumer);
+                messagePushClientsMap.put(consumer, new MessagePushClient(LOCALHOST, port));
+            }
+            messagePushClientsMap.get(consumer).pushMsg(recordsMap.get(consumer).take());
+
+        }
     }
 
     private static class MessageDeliveryService extends MessageDeliveryGrpc.MessageDeliveryImplBase {
@@ -115,8 +154,12 @@ public class Broker {
             return new StreamObserver<MessageDeliveryProto.RecordReq>() {
                 @Override
                 public void onNext(MessageDeliveryProto.RecordReq recordReq) {
-                    BrokerRecord record = new BrokerRecord(); // TODO: implement create the record
-                    broker.incomingRecordHandler(record);
+                    BrokerRecord record = new BrokerRecord(recordReq, ++broker.timestamp);
+                    try {
+                        broker.incomingRecordHandler(record);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
                 }
 
                 @Override

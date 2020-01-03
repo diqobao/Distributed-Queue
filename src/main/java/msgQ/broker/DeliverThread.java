@@ -6,4 +6,13 @@ public class DeliverThread extends Thread {
         this.broker = broker;
     }
 
+    public void run() {
+        try {
+            while (true) {
+                broker.sendNewRecords();
+            }
+        } catch (InterruptedException e) {
+
+        }
+    }
 }

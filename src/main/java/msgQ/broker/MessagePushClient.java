@@ -14,7 +14,7 @@ import msgQ.consumer.MessagePushProto.*;
 import org.apache.kafka.common.protocol.types.Field;
 
 
-public class MessagePushClient {
+class MessagePushClient {
     private static final Logger logger = Logger.getLogger(MessagePushClient.class.getName());
 
     private final ManagedChannel channel;
@@ -34,7 +34,7 @@ public class MessagePushClient {
         asyncStub = MessagePushGrpc.newStub(channel);
     }
 
-    public void pushMsg(ConsumerRecord record) {
+    public void pushMsg(BrokerRecord record) {
         ConsumerRecordReq consumerRecordReq = ConsumerRecordReq.newBuilder()
                 .setTopic(record.getTopic()).setMessage((String) record.getValue()).setUuid(record.getUuid().toString()).build();
 
@@ -57,8 +57,8 @@ public class MessagePushClient {
     public static void main(String[] args) throws InterruptedException {
         MessagePushClient client = new MessagePushClient("localhost", 5001);
         try {
-            ConsumerRecord<String> record1 = new ConsumerRecord<>(UUID.randomUUID(), "topic", "msg1");
-            ConsumerRecord<String> record2 = new ConsumerRecord<>(UUID.randomUUID(), "topic", "msg2");
+            BrokerRecord<String> record1 = new BrokerRecord<>(UUID.randomUUID(), "topic", "msg1", 2);
+            BrokerRecord<String> record2 = new BrokerRecord<>(UUID.randomUUID(), "topic", "msg2", 2);
             client.pushMsg(record1);
             client.pushMsg(record2);
         } finally {
