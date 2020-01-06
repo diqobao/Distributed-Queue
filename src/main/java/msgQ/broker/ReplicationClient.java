@@ -47,7 +47,7 @@ public class ReplicationClient {
         }
     }
 
-    public void shutdown() throws InterruptedException {
+    void shutdown() throws InterruptedException {
         channel.shutdown().awaitTermination(5, TimeUnit.SECONDS);
     }
 

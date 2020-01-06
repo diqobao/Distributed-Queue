@@ -123,7 +123,7 @@ public class Broker {
         }
     }
 
-    public List<String> getSubscribersForTopic(String topic) {
+    List<String> getSubscribersForTopic(String topic) {
         String topicPath = Paths.get(REPLICA_PATH, topic).toString();
         try {
             return zkClient.getChildren().forPath(topicPath);
@@ -147,7 +147,7 @@ public class Broker {
         }
     }
 
-    public void sendNewRecords() throws Exception {
+    void sendNewRecords() throws Exception {
         for(String consumer: recordsMap.keySet()) {
             if(!messagePushClientsMap.containsKey(consumer)) {
                 int port = Integer.parseInt(consumer);
@@ -226,6 +226,5 @@ public class Broker {
     }
 
     public static void main(String[] args) {
-        System.out.println("000");
     }
 }
