@@ -1,6 +1,7 @@
 package msgQ.broker;
 
 import io.grpc.stub.StreamObserver;
+import msgQ.consumer.MessagePushProto;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.framework.recipes.leader.LeaderLatch;
@@ -40,7 +41,8 @@ public class Broker {
     private ConcurrentHashMap<String, BlockingQueue<BrokerRecord>> recordsMap;
     private HashMap<String, MessagePushClient> messagePushClientsMap;
 //    private MessagePushClient messagePushClient;
-    AtomicLong timestamp;
+    private AtomicLong timestamp;
+    private HashMap<String, ReplicationClient> replicationClientsMap;
 
     public Broker(int _groupId, Properties brokerConfigs, int _port) {
         BROKERID = brokerConfigs.getProperty("id");
@@ -52,6 +54,7 @@ public class Broker {
         isLeader = false;
         recordsMap = new ConcurrentHashMap<>();
         messagePushClientsMap = new HashMap<>();
+        replicationClientsMap = new HashMap<>();
 //        messagePushClient = new MessagePushClient("localhost", PORT);
         state = State.LATENT;
     }
@@ -103,7 +106,6 @@ public class Broker {
             @Override
             public void notLeader() {
                 isLeader = false;
-                LOGGER.info("No longer leader");
             }
         });
         leaderLatch.start();
@@ -112,8 +114,9 @@ public class Broker {
     private void updatePrimaryBroker() {
         // TODO: update information in zookeeper
         try {
-            if (zkClient.checkExists().forPath(PRIMARY_PATH) == null) {
-                zkClient.create().creatingParentsIfNeeded().forPath(PRIMARY_PATH);
+            String primaryPath = Paths.get(String.valueOf(groupId), PRIMARY_PATH).toString();
+            if (zkClient.checkExists().forPath(primaryPath) == null) {
+                zkClient.create().creatingParentsIfNeeded().forPath(primaryPath);
             }
         } catch (Exception e) {
             LOGGER.warning("updating failed");
@@ -139,19 +142,31 @@ public class Broker {
         String message = (String) record.getValue();
         List<String> subscribers = getSubscribersForTopic(topic);
         for(String consumer: subscribers) {
-            if(recordsMap.containsKey(consumer)) recordsMap.put(consumer, new LinkedBlockingQueue<>());
+            if(!recordsMap.containsKey(consumer)) recordsMap.put(consumer, new LinkedBlockingQueue<>());
             recordsMap.get(consumer).put(record);
         }
     }
 
-    public void sendNewRecords() throws InterruptedException {
+    public void sendNewRecords() throws Exception {
         for(String consumer: recordsMap.keySet()) {
             if(!messagePushClientsMap.containsKey(consumer)) {
                 int port = Integer.parseInt(consumer);
                 messagePushClientsMap.put(consumer, new MessagePushClient(LOCALHOST, port));
             }
-            messagePushClientsMap.get(consumer).pushMsg(recordsMap.get(consumer).take());
+            BrokerRecord record = recordsMap.get(consumer).take();
+            messagePushClientsMap.get(consumer).pushMsg(record);
+            sendReplicateSignal(record);
+        }
+    }
 
+    private void sendReplicateSignal(BrokerRecord record) throws Exception {
+        String replicatesPath = Paths.get(String.valueOf(groupId), REPLICA_PATH).toString();
+        List<String> replicateBrokers = zkClient.getChildren().forPath(replicatesPath);
+        for (String replicateBroker : replicateBrokers) {
+            if(replicateBroker.equals(PORT)) continue;
+            ReplicationClient replicationClient = new ReplicationClient(LOCALHOST, replicateBroker);
+            replicationClient.replicateMsg(record);
+            replicationClient.shutdown();
         }
     }
 
@@ -171,10 +186,10 @@ public class Broker {
         }
 
         @Override
-        public StreamObserver<MessageDeliveryProto.RecordReq> publishMsg(final StreamObserver<MessageDeliveryProto.RecordReply> responseObserver) {
-            return new StreamObserver<MessageDeliveryProto.RecordReq>() {
+        public StreamObserver<MessageDeliveryProto.RecordReq> publishMsg(final StreamObserver<RecordReply> responseObserver) {
+            return new StreamObserver<RecordReq>() {
                 @Override
-                public void onNext(MessageDeliveryProto.RecordReq recordReq) {
+                public void onNext(RecordReq recordReq) {
                     BrokerRecord record = new BrokerRecord(recordReq, broker.timestamp.addAndGet(1));
                     try {
                         broker.incomingRecordHandler(record);
@@ -189,11 +204,28 @@ public class Broker {
 
                 @Override
                 public void onCompleted() {
-                    responseObserver.onNext(MessageDeliveryProto.RecordReply.newBuilder()
+                    responseObserver.onNext(RecordReply.newBuilder()
                             .setUuid("").setMessage("ok").setCode(200).build());
                     responseObserver.onCompleted();
                 }
             };
         }
+
+        @Override
+        public void replicateMsg(RecordReq recordReq, StreamObserver<RecordReply> responseObserver) {
+            BrokerRecord record = new BrokerRecord(recordReq, broker.timestamp.addAndGet(1));
+            try {
+                broker.incomingRecordHandler(record);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            RecordReply reply = RecordReply.newBuilder().setUuid(recordReq.getUuid()).setMessage("ok").build();
+            responseObserver.onNext(reply);
+            responseObserver.onCompleted();
+        }
+    }
+
+    public static void main(String[] args) {
+        System.out.println("000");
     }
 }

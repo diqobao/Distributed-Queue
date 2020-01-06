@@ -7,6 +7,7 @@ option java_outer_classname = "MessageDeliveryProto";
 
 service MessageDelivery {
     rpc PublishMsg (stream RecordReq) returns (RecordReply) {}
+    rpc ReplicateMsg(RecordReq) returns (RecordReply) {}
 }
 
 message RecordReq {
@@ -14,6 +15,7 @@ message RecordReq {
     string topic = 2;
     string message = 3;
     int32 groupId = 4;
+    int64 timestamp = 5;
 }
 
 message RecordReply {

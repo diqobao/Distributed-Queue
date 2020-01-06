@@ -46,5 +46,7 @@ public class BrokerRecord<T> implements Record<T> {
         return this.groupId;
     }
 
-
+    public long getTimestamp() {
+        return timestamp;
+    }
 }

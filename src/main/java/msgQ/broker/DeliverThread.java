@@ -13,6 +13,8 @@ public class DeliverThread extends Thread {
             }
         } catch (InterruptedException e) {
 
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 }
