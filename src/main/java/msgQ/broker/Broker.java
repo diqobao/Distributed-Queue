@@ -6,6 +6,8 @@ import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.framework.recipes.leader.LeaderLatch;
 import org.apache.curator.framework.recipes.leader.LeaderLatchListener;
 import org.apache.curator.utils.CloseableUtils;
+
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -13,14 +15,14 @@ import java.util.Properties;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.logging.Logger;
 
 import msgQ.broker.BrokerUtils.*;
 import msgQ.common.ZkUtils;
 import msgQ.broker.MessageDeliveryProto.*;
 
-import static msgQ.common.Constants.LOCALHOST;
-import static msgQ.common.Constants.REPLICA_PATH;
+import static msgQ.common.Constants.*;
 
 
 public class Broker {
@@ -38,15 +40,15 @@ public class Broker {
     private ConcurrentHashMap<String, BlockingQueue<BrokerRecord>> recordsMap;
     private HashMap<String, MessagePushClient> messagePushClientsMap;
 //    private MessagePushClient messagePushClient;
-    private long timestamp;
+    AtomicLong timestamp;
 
     public Broker(int _groupId, Properties brokerConfigs, int _port) {
         BROKERID = brokerConfigs.getProperty("id");
         groupId = _groupId;
         PORT = _port;
-        PATH = String.format("/%s/%d", "brokers", groupId);
+        PATH = Paths.get(BROKER_PATH,"" + groupId).toString();
         zkAddress = brokerConfigs.getProperty("zkAddress");
-        timestamp = 0;
+        timestamp = new AtomicLong(0);
         isLeader = false;
         recordsMap = new ConcurrentHashMap<>();
         messagePushClientsMap = new HashMap<>();
@@ -61,25 +63,7 @@ public class Broker {
             zkClient.getZookeeperClient().blockUntilConnectedOrTimedOut();
             if (zkClient.checkExists().forPath(PATH) == null)
                 zkClient.create().creatingParentsIfNeeded().forPath(PATH);
-            leaderLatch = new LeaderLatch(zkClient, PATH, BROKERID);
-            leaderLatch.addListener(new LeaderLatchListener() {
-                @Override
-                public void isLeader() {
-                    isLeader = true;
-                    LOGGER.info("LEADER ELECTION: is now primary node");
-//                    if (zkClient.checkExists().forPath(PATH) == null)
-//                        zkClient.create().creatingParentsIfNeeded().forPath(PATH);
-                    spawnDeliverThread();
-                    // TODO: update information in zookeeper
-                }
-
-                @Override
-                public void notLeader() {
-                    isLeader = false;
-                    LOGGER.info("No longer leader");
-                }
-            });
-            leaderLatch.start();
+            registerLeaderElection();
         } catch (Exception e) {
             LOGGER.info("Connection failed");
             e.printStackTrace();
@@ -105,12 +89,41 @@ public class Broker {
         CloseableUtils.closeQuietly(zkClient);
     }
 
-    public List<String> getSubscribersForTopic(String topic) {
-        String topicPath = REPLICA_PATH + topic;
-        List<String> subscribers = null;
+    private void registerLeaderElection() throws Exception {
+        leaderLatch = new LeaderLatch(zkClient, PATH, BROKERID);
+        leaderLatch.addListener(new LeaderLatchListener() {
+            @Override
+            public void isLeader() {
+                isLeader = true;
+                LOGGER.info("LEADER ELECTION: is now primary node");
+                updatePrimaryBroker();
+                spawnDeliverThread();
+            }
+
+            @Override
+            public void notLeader() {
+                isLeader = false;
+                LOGGER.info("No longer leader");
+            }
+        });
+        leaderLatch.start();
+    }
+
+    private void updatePrimaryBroker() {
+        // TODO: update information in zookeeper
         try {
-            subscribers =  zkClient.getChildren().forPath(topicPath);
-            return subscribers;
+            if (zkClient.checkExists().forPath(PRIMARY_PATH) == null) {
+                zkClient.create().creatingParentsIfNeeded().forPath(PRIMARY_PATH);
+            }
+        } catch (Exception e) {
+            LOGGER.warning("updating failed");
+        }
+    }
+
+    public List<String> getSubscribersForTopic(String topic) {
+        String topicPath = Paths.get(REPLICA_PATH, topic).toString();
+        try {
+            return zkClient.getChildren().forPath(topicPath);
         } catch (Exception e) {
             LOGGER.warning(e.getMessage());
         }
@@ -142,6 +155,14 @@ public class Broker {
         }
     }
 
+    public boolean isPrimary() {
+        return isLeader;
+    }
+
+    public long getCurrentTimestamp() {
+        return timestamp.get();
+    }
+
     private static class MessageDeliveryService extends MessageDeliveryGrpc.MessageDeliveryImplBase {
         Broker broker;
 
@@ -154,7 +175,7 @@ public class Broker {
             return new StreamObserver<MessageDeliveryProto.RecordReq>() {
                 @Override
                 public void onNext(MessageDeliveryProto.RecordReq recordReq) {
-                    BrokerRecord record = new BrokerRecord(recordReq, ++broker.timestamp);
+                    BrokerRecord record = new BrokerRecord(recordReq, broker.timestamp.addAndGet(1));
                     try {
                         broker.incomingRecordHandler(record);
                     } catch (InterruptedException e) {

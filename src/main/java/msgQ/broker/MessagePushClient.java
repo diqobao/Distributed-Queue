@@ -34,7 +34,7 @@ class MessagePushClient {
         asyncStub = MessagePushGrpc.newStub(channel);
     }
 
-    public void pushMsg(BrokerRecord record) {
+    void pushMsg(BrokerRecord record) {
         ConsumerRecordReq consumerRecordReq = ConsumerRecordReq.newBuilder()
                 .setTopic(record.getTopic()).setMessage((String) record.getValue()).setUuid(record.getUuid().toString()).build();
 

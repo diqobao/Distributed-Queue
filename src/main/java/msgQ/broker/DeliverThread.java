@@ -8,7 +8,7 @@ public class DeliverThread extends Thread {
 
     public void run() {
         try {
-            while (true) {
+            while (broker.isPrimary()) {
                 broker.sendNewRecords();
             }
         } catch (InterruptedException e) {
