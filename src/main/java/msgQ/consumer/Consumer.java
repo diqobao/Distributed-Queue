@@ -40,7 +40,7 @@ public class Consumer {
         this.records = new LinkedBlockingDeque<>();
         this.server = ServerBuilder.forPort(PORT).addService(new MessagePushService(records))
                 .build();
-        this.recvThread = new RecvThread(records);
+        this.recvThread = new RecvThread(this);
     }
 
     /**
@@ -75,16 +75,18 @@ public class Consumer {
         recvThread.join();
     }
 
-    private void _subscribeTopic(String topic) throws Exception {
-        subcriptions.add(topic);
-        String path = Paths.get(SUBSCRIPTION_PATH, topic, "" + PORT).toString();
-        zkClient.create().creatingParentContainersIfNeeded().forPath(path);
+    /**
+     * return list of all subscribed topics
+     *
+     */
+    public String[] getSubscriptions() {
+        return subcriptions.toArray(new String[0]);
     }
 
-    private void _unsubscribeTopic(String topic) throws Exception {
-        subcriptions.remove(topic);
-        String path = Paths.get(SUBSCRIPTION_PATH, topic, "" + PORT).toString();
-        zkClient.delete().deletingChildrenIfNeeded().forPath(path);
+    public void pollRecord() {
+        if(!records.isEmpty()) {
+            System.out.println(records.poll().toString());
+        }
     }
 
     public void subscribeTopics(String[] topics) throws Exception {
@@ -99,12 +101,16 @@ public class Consumer {
         }
     }
 
-    /**
-     * return list of all subscribed topics
-     *
-     */
-    public String[] getSubscriptions() {
-        return subcriptions.toArray(new String[0]);
+    private void _subscribeTopic(String topic) throws Exception {
+        subcriptions.add(topic);
+        String path  = Paths.get(SUBSCRIPTION_PATH, topic, "" + PORT).toString();
+        zkClient.create().creatingParentContainersIfNeeded().forPath(path);
+    }
+
+    private void _unsubscribeTopic(String topic) throws Exception {
+        subcriptions.remove(topic);
+        String path = Paths.get(SUBSCRIPTION_PATH, topic, "" + PORT).toString();
+        zkClient.delete().deletingChildrenIfNeeded().forPath(path);
     }
 
     /**
@@ -118,28 +124,6 @@ public class Consumer {
     private void blockUntilShutdown() throws InterruptedException {
         if (server != null) {
             server.awaitTermination();
-        }
-    }
-
-    private static class RecvThread extends Thread {
-        private final BlockingQueue<ConsumerRecord> records;
-
-        RecvThread(BlockingQueue<ConsumerRecord> _records) {
-            this.records = _records;
-        }
-
-        @Override
-        public void run() {
-            try {
-                while(true) {
-                    if(!records.isEmpty()) {
-                        System.out.println(records.poll().toString());
-                    }
-                    Thread.sleep(1000);
-                }
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
         }
     }
 

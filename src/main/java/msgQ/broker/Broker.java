@@ -40,7 +40,6 @@ public class Broker {
     // consumer -> records
     private ConcurrentHashMap<String, BlockingQueue<BrokerRecord>> recordsMap;
     private HashMap<String, MessagePushClient> messagePushClientsMap;
-//    private MessagePushClient messagePushClient;
     private AtomicLong timestamp;
     private HashMap<String, ReplicationClient> replicationClientsMap;
 
@@ -55,8 +54,19 @@ public class Broker {
         recordsMap = new ConcurrentHashMap<>();
         messagePushClientsMap = new HashMap<>();
         replicationClientsMap = new HashMap<>();
-//        messagePushClient = new MessagePushClient("localhost", PORT);
         state = State.LATENT;
+    }
+
+    public void start() {
+        this.register();
+    }
+
+    private void stop() {
+        if (state != State.STARTED) {
+            return; // TODO: throw exception
+        }
+        CloseableUtils.closeQuietly(leaderLatch);
+        CloseableUtils.closeQuietly(zkClient);
     }
 
     private void register() {
@@ -78,18 +88,6 @@ public class Broker {
      */
     private void spawnDeliverThread() {
         new DeliverThread(this).start();
-    }
-
-    public void start() {
-        this.register();
-    }
-
-    private void stop() {
-        if (state != State.STARTED) {
-            return; // TODO: throw exception
-        }
-        CloseableUtils.closeQuietly(leaderLatch);
-        CloseableUtils.closeQuietly(zkClient);
     }
 
     private void registerLeaderElection() throws Exception {
@@ -123,16 +121,6 @@ public class Broker {
         }
     }
 
-    List<String> getSubscribersForTopic(String topic) {
-        String topicPath = Paths.get(REPLICA_PATH, topic).toString();
-        try {
-            return zkClient.getChildren().forPath(topicPath);
-        } catch (Exception e) {
-            LOGGER.warning(e.getMessage());
-        }
-        return new ArrayList<>();
-    }
-
     /**
      * Handler for each single incoming record from producer
      * TODO: implement handler
@@ -145,6 +133,16 @@ public class Broker {
             if(!recordsMap.containsKey(consumer)) recordsMap.put(consumer, new LinkedBlockingQueue<>());
             recordsMap.get(consumer).put(record);
         }
+    }
+
+    List<String> getSubscribersForTopic(String topic) {
+        String topicPath = Paths.get(REPLICA_PATH, topic).toString();
+        try {
+            return zkClient.getChildren().forPath(topicPath);
+        } catch (Exception e) {
+            LOGGER.warning(e.getMessage());
+        }
+        return new ArrayList<>();
     }
 
     void sendNewRecords() throws Exception {

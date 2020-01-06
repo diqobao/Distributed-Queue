@@ -11,8 +11,6 @@ import io.grpc.stub.StreamObserver;
 import msgQ.consumer.ConsumerRecord;
 import msgQ.consumer.MessagePushGrpc;
 import msgQ.consumer.MessagePushProto.*;
-import org.apache.kafka.common.protocol.types.Field;
-
 
 class MessagePushClient {
     private static final Logger logger = Logger.getLogger(MessagePushClient.class.getName());
@@ -34,6 +32,10 @@ class MessagePushClient {
         asyncStub = MessagePushGrpc.newStub(channel);
     }
 
+    public void shutdown() throws InterruptedException {
+        channel.shutdown().awaitTermination(5, TimeUnit.SECONDS);
+    }
+
     void pushMsg(BrokerRecord record) {
         ConsumerRecordReq consumerRecordReq = ConsumerRecordReq.newBuilder()
                 .setTopic(record.getTopic()).setMessage((String) record.getValue()).setUuid(record.getUuid().toString()).build();
@@ -48,10 +50,6 @@ class MessagePushClient {
         } catch (StatusRuntimeException e) {
             e.printStackTrace();
         }
-    }
-
-    public void shutdown() throws InterruptedException {
-        channel.shutdown().awaitTermination(5, TimeUnit.SECONDS);
     }
 
     public static void main(String[] args) throws InterruptedException {
