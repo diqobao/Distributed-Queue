@@ -12,7 +12,7 @@
         <grpc.version>1.22.2</grpc.version>
         <protobuf.version>3.9.0</protobuf.version>
         <protoc.version>3.9.0</protoc.version>
-        <armeria.version>0.90.2</armeria.version>
+        <armeria.version>0.97.0</armeria.version>
         <!-- required for jdk9 -->
         <maven.compiler.source>1.8</maven.compiler.source>
         <maven.compiler.target>1.8</maven.compiler.target>
